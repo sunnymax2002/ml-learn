@@ -50,30 +50,44 @@ def AggCasesDeaths(df):
 def PlotAggGraph(df_top_cases_and_deaths):
     plt.close('all')
 
-    fig, (pc, pd, pdr, pcp) = plt.subplots(nrows=4, sharex=True)
-    rc1 = pc.bar(df_top_cases_and_deaths.index, df_top_cases_and_deaths.total_cases)
-    pc.set_ylabel('Total Cases')
+    pd_plot = False
 
-    pd.bar(df_top_cases_and_deaths.index, df_top_cases_and_deaths.total_deaths, color='grey')
-    pd.set_ylabel('Total Deaths')
+    if pd_plot:
+        # Plotting with Pandas dataframe: https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html
+        
+        df_top_cases_and_deaths.iloc[:,[0,1]].plot.bar()
+        #plt.show()
 
-    # Note: To plot two series on same chart with 2 y-axis, pdr = pd.twinx() ...
-    pdr.bar(df_top_cases_and_deaths.index, df_top_cases_and_deaths.percent_death, color='red')
-    pdr.set_ylabel('Percentage Deaths')
+        df_top_cases_and_deaths.iloc[:,2].plot()
+        #plt.show()
 
-    pcp.bar(df_top_cases_and_deaths.index, df_top_cases_and_deaths.cases_per_pop, color='green')
-    pcp.set_ylabel('Cases as Milli-% Population')
+        df_top_cases_and_deaths.iloc[:,3].plot()
+        plt.show()
+    else:
+        fig, (pc, pd, pdr, pcp) = plt.subplots(nrows=4, sharex=True)
+        rc1 = pc.bar(df_top_cases_and_deaths.index, df_top_cases_and_deaths.total_cases)
+        pc.set_ylabel('Total Cases')
 
-    # Add labels above bars in total cases chart
-    #AutoLabelBarChart(rc1, pc)
+        pd.bar(df_top_cases_and_deaths.index, df_top_cases_and_deaths.total_deaths, color='grey')
+        pd.set_ylabel('Total Deaths')
 
-    fig.suptitle('COVID-19 Analysis of Top 20 Countries by Total Cases: ' + datetime.now().strftime("%d %B, %Y"), fontsize=20)
-    plt.xticks(rotation=90)
+        # Note: To plot two series on same chart with 2 y-axis, pdr = pd.twinx() ...
+        pdr.bar(df_top_cases_and_deaths.index, df_top_cases_and_deaths.percent_death, color='red')
+        pdr.set_ylabel('Percentage Deaths')
 
-    # TODO how to show as well as save to file?
-    plt.show()
-    gpath = hf.GetTempFileFullPath(datetime.now().strftime("%Y%m%d") + "-covid-19.png")
-    #plt.savefig(gpath)
+        pcp.bar(df_top_cases_and_deaths.index, df_top_cases_and_deaths.cases_per_pop, color='green')
+        pcp.set_ylabel('Cases as Milli-% Population')
+
+        # Add labels above bars in total cases chart
+        #AutoLabelBarChart(rc1, pc)
+
+        fig.suptitle('COVID-19 Analysis of Top 20 Countries by Total Cases: ' + datetime.now().strftime("%d %B, %Y"), fontsize=20)
+        plt.xticks(rotation=90)
+
+        # TODO how to show as well as save to file?
+        plt.show()
+        gpath = hf.GetTempFileFullPath(datetime.now().strftime("%Y%m%d") + "-covid-19.png")
+        #plt.savefig(gpath)
 
 # Series Analysis
 def TimeSeriesAnalysis(df, df_top_cases_and_deaths):
