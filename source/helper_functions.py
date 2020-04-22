@@ -4,6 +4,11 @@ import pandas as pd
 import tempfile
 from datetime import datetime
 
+# List of Nice articles to learn from
+# Intro to Pandas: https://towardsdatascience.com/a-quick-introduction-to-the-pandas-python-library-f1b678f34673
+
+# File Handling
+
 def GetFileFromUrl(url, fpath):
     if(not path.exists(fpath)):
         print("[HF] Downloading dataset to local file: " + fpath)
@@ -18,6 +23,7 @@ def GetFileFromUrl(url, fpath):
 def GetTempFileFullPath(fname):
     return path.join(tempfile.gettempdir(), fname)
 
+# Opening Datasets from URLs / files
 
 def GetCovid19Data():
     # Worldwide daily COVID-19 numbers by country: https://data.europa.eu/euodp/en/data/dataset/covid-19-coronavirus-data/resource/55e8f966-d5c8-438e-85bc-c7a5a26f4863
@@ -44,10 +50,16 @@ def GetWorldPopulationData():
     print("[HF] Population Data from Year 2018...")
     return pd.read_excel(fpath, header=3, usecols=['Country Name', '2018'])
 
+def GetIndiaNifty500HistData():
+    fpath = "D:\Learning\My Code\git_repos\ml-learn\datasets\India Nifty 500 Historical Data.xlsx"
+    return pd.read_excel(fpath)
+
+# Plotting related
+
 # Usage Example:
 #   rc1 = pc.bar(df_top_cases_and_deaths.index, df_top_cases_and_deaths.total_cases)
 #   AutolabelBarChart(rc1, pc)
-def AutolabelBarChart(rects, ax):
+def AutoLabelBarChart(rects, ax):
     """Attach a text label above each bar in *rects*, displaying its height."""
     for rect in rects:
         height = rect.get_height()
