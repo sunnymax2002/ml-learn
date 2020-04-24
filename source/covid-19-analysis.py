@@ -2,7 +2,7 @@
  
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import helper_functions as hf
 from scipy.optimize import curve_fit
@@ -133,6 +133,7 @@ def TimeSeriesAnalysis(df, df_top_cases_and_deaths):
             ['dateRep', 'cases', 'deaths']].sort_values(by='dateRep').set_index('dateRep')
         #print(dfts)
 
+        cntryname = df_top_cases_and_deaths.index[countryIndex]
         # Obtain cumulative sums for cases and deaths
         dftscum = dfts.cumsum()
         #dfts.info()
@@ -144,6 +145,13 @@ def TimeSeriesAnalysis(df, df_top_cases_and_deaths):
         # Curve fitting
         actdays = len(dftscum)
         estdays = 3 * actdays
+
+        # Date index for plots
+        stDate = dftscum.index[0]
+        endDate = stDate + timedelta(estdays - 1)
+        date_rng = pd.date_range(start=stDate, end=endDate, freq='D')
+        print(date_rng)
+
         x = list(range(0, actdays))
         popt, pcov = curve_fit(Covid19Estimator, x, dftscum.cases)
         print(popt)
@@ -184,12 +192,15 @@ def TimeSeriesAnalysis(df, df_top_cases_and_deaths):
         r = math.floor(countryIndex / 4)
         c = countryIndex % 4
 
-        ax[r, c].scatter(x, y0, color='green', marker='.')
         #plt.plot(x, y, color='red')
 
         # Blue dotted estimated plot
-        ax[r, c].plot(x, yf, 'b:')
+        ax[r, c].plot(date_rng, yf, 'b:')
 
+        # Red actual
+        ax[r, c].scatter(date_rng, y0, color='red', marker='.', linewidths=0.5)
+
+        ax[r, c].set_title(cntryname)
         #plt.plot(y)
         #a1.plot(y)
         #plt.plot(dftscum.cases, color='red')
