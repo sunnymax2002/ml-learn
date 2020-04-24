@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import helper_functions as hf
 from scipy.optimize import curve_fit
 from scipy.signal import find_peaks
@@ -125,7 +126,13 @@ def TestEstimator():
 # Series Analysis
 def TimeSeriesAnalysis(df, df_top_cases_and_deaths):
     # Visualize the time series
+    plt.close('all')
     fig, ax = plt.subplots(nrows=5, ncols=4, sharex=True)
+    colors = cm.rainbow(np.linspace(0, 1, 20))
+
+    est_params = []
+    #pd.DataFrame(columns=['x0', 'x1', 'k0', 'Peak', 'PeakDate'])
+    #est_params.reindex(df_top_cases_and_deaths.index)
 
     # Extract time series for the top country
     for countryIndex in range(0, 20):
@@ -154,58 +161,79 @@ def TimeSeriesAnalysis(df, df_top_cases_and_deaths):
 
         x = list(range(0, actdays))
         popt, pcov = curve_fit(Covid19Estimator, x, dftscum.cases)
-        print(popt)
 
-        x0 = popt[0]
-
-        # Adjust 'gain'
-        gain = 1
-        k0 = popt[1] * gain
-        P = popt[2]
-
-        # Extrapolate
-        x = list(range(0, estdays))
-        y = Covid19Estimator(x, x0, k0, P)
+        r = math.floor(countryIndex / 4)
+        c = countryIndex % 4
         
+        ax[r, c].set_title(cntryname)
+
+        # Plot actual data
         y0 = dftscum.cases.tolist()
         y1 = [0] * (estdays - len(dftscum.cases))
         y0 += y1
-
-        # Find x1 for Covid19EstimatorFull
-        #   x1 > x0
-        #   xP for which y = ymax
-        #   x1 - xP nearly equal to xP - x0
-        #   Assume x1-max = 10000
-        # Find near peak [y]
-        ynp = 0.99 * P
-        for i in range(int(x0), len(y)):
-            yi = y[i]
-            if yi >= ynp:
-                break
+        ax[r, c].scatter(date_rng, y0, color=colors[19 - countryIndex], marker='.', linewidths=0.5)
         
-        # x1 is at same distance from x-yp as x0
-        x1 = i + (i - x0)
+        if np.any(np.isinf(pcov)):
+            print("Curve Fit failed for " + cntryname)
+            print(popt)
+            print(pcov)
+            est_params.append([np.nan, np.nan, np.nan, np.nan, np.nan])
+        else:
+            x0 = popt[0]
 
-        # Calculate decreasing values
-        yf = Covid19EstimatorFull(x, x0, k0, P, x1)
-        
-        r = math.floor(countryIndex / 4)
-        c = countryIndex % 4
+            # Adjust 'gain'
+            gain = 1
+            k0 = popt[1] * gain
+            P = popt[2]
 
-        #plt.plot(x, y, color='red')
+            # Extrapolate
+            x = list(range(0, estdays))
+            y = Covid19Estimator(x, x0, k0, P)
 
-        # Blue dotted estimated plot
-        ax[r, c].plot(date_rng, yf, 'b:')
+            # Find x1 for Covid19EstimatorFull
+            #   x1 > x0
+            #   xP for which y = ymax
+            #   x1 - xP nearly equal to xP - x0
+            #   Assume x1-max = 10000
+            # Find near peak [y]
+            ynp = 0.99 * P
+            for i in range(int(x0), len(y)):
+                yi = y[i]
+                if yi >= ynp:
+                    break
+            
+            # x1 is at same distance from x-yp as x0
+            x1 = i + (i - x0)
 
-        # Red actual
-        ax[r, c].scatter(date_rng, y0, color='red', marker='.', linewidths=0.5)
+            # Calculate decreasing values
+            yf = Covid19EstimatorFull(x, x0, k0, P, x1)
+            
+            est_lst = [x0, x1, k0, int(P), stDate + timedelta(i - 1)]
+            est_params.append(est_lst)
 
-        ax[r, c].set_title(cntryname)
-        #plt.plot(y)
-        #a1.plot(y)
-        #plt.plot(dftscum.cases, color='red')
+            #plt.plot(x, y, color='red')
 
+            # Blue dotted estimated plot
+            ax[r, c].plot(date_rng, yf, color=colors[countryIndex]) #'b:')
+
+            # Red actual
+            #plt.scatter(date_rng, y0, color='red', marker='.', linewidths=0.5)
+
+            #ax[r, c].xticks(rotation=90)
+
+            #plt.plot(y)
+            #a1.plot(y)
+            #plt.plot(dftscum.cases, color='red')
+    
     plt.show()
+    print(est_params)
+    print(df_top_cases_and_deaths)
+    #pd.DataFrame(columns=['x0', 'x1', 'k0', 'Peak', 'PeakDate'])
+    est_df = pd.DataFrame(est_params, index=df_top_cases_and_deaths.index, columns=['x0', 'x1', 'k0', 'PeakCases', 'PeakDate'])
+    print(est_df)
+    #df_top_cases_and_deaths['x0'] = pd.DataFrame()
+    comb_df = pd.concat([df_top_cases_and_deaths, est_df], axis=1)
+    print(comb_df)
 
 #TestEstimator()
 
