@@ -1,10 +1,13 @@
 #!/usr/bin/python
  
 import pandas as pd
-#from os import path
+import numpy as np
 from datetime import datetime
 import matplotlib.pyplot as plt
 import helper_functions as hf
+from scipy.optimize import curve_fit
+from scipy.signal import find_peaks
+import math
 
 # Analyzes COVID-19 DF and extracts Top countries by Total Cases, their total deaths, % death to total cases and % cases to total population
 def AggCasesDeaths(df):
@@ -28,6 +31,7 @@ def AggCasesDeaths(df):
     df_top_cases_and_deaths = df_cases_and_deaths.loc[df_cases_and_deaths.iloc[0:num_toprows].index]
     #df_top_cases_and_deaths.info()
 
+    # TODO: COVID-19 df already has Population Data, comment this out and use it instead
     # Get World Population Data
     pop_df = hf.GetWorldPopulationData()
     pop_df = pop_df[pop_df['Country Name'].isin(df_top_cases_and_deaths.index)]
@@ -89,10 +93,110 @@ def PlotAggGraph(df_top_cases_and_deaths):
         gpath = hf.GetTempFileFullPath(datetime.now().strftime("%Y%m%d") + "-covid-19.png")
         #plt.savefig(gpath)
 
+# Function estimator for virus outbreak
+#   k - growth factor
+#   
+def Covid19Estimator(x, x0, k0, P):
+    # Full curve will reducing part
+#    y = P * ( (1 / (1 + np.exp( -k*(x-x0) ) ) ) + (1 / (1 + np.exp( -k*(x1-x) ) ) ) )
+
+    # Partial curve only with increase
+    y = P * ( (1 / (1 + np.exp( -k0*(x-x0) ) ) ) )
+
+    return y
+
+def Covid19EstimatorFull(x, x0, k0, P, x1):
+    # Full curve will reducing part
+    y = P * ( (1 / (1 + np.exp( -k0*(x-x0) ) ) ) + (1 / (1 + np.exp( -k0*(x1-x) ) ) ) - 1 )
+
+    return y
+
+def TestEstimator():
+    x = np.linspace(0, 1000, 1000)
+    #print(x)
+
+    y = Covid19Estimator(x, 300, 800, 0.03, 1000)
+
+    #print(y)
+    plt.plot(y)
+    plt.show()
+    print(y)
+
 # Series Analysis
 def TimeSeriesAnalysis(df, df_top_cases_and_deaths):
-    # Visualize
-    print()
+    # Visualize the time series
+    fig, ax = plt.subplots(nrows=5, ncols=4, sharex=True)
+
+    # Extract time series for the top country
+    for countryIndex in range(0, 20):
+        dfts = df.loc[df['countriesAndTerritories'].eq(df_top_cases_and_deaths.index[countryIndex]), 
+            ['dateRep', 'cases', 'deaths']].sort_values(by='dateRep').set_index('dateRep')
+        #print(dfts)
+
+        # Obtain cumulative sums for cases and deaths
+        dftscum = dfts.cumsum()
+        #dfts.info()
+        #print(dftscum)
+
+        #dftscum.plot() #x='dateRep', y='cases')
+        #plt.show()
+
+        # Curve fitting
+        actdays = len(dftscum)
+        estdays = 3 * actdays
+        x = list(range(0, actdays))
+        popt, pcov = curve_fit(Covid19Estimator, x, dftscum.cases)
+        print(popt)
+
+        x0 = popt[0]
+
+        # Adjust 'gain'
+        gain = 1
+        k0 = popt[1] * gain
+        P = popt[2]
+
+        # Extrapolate
+        x = list(range(0, estdays))
+        y = Covid19Estimator(x, x0, k0, P)
+        
+        y0 = dftscum.cases.tolist()
+        y1 = [0] * (estdays - len(dftscum.cases))
+        y0 += y1
+
+        # Find x1 for Covid19EstimatorFull
+        #   x1 > x0
+        #   xP for which y = ymax
+        #   x1 - xP nearly equal to xP - x0
+        #   Assume x1-max = 10000
+        # Find near peak [y]
+        ynp = 0.99 * P
+        for i in range(int(x0), len(y)):
+            yi = y[i]
+            if yi >= ynp:
+                break
+        
+        # x1 is at same distance from x-yp as x0
+        x1 = i + (i - x0)
+
+        # Calculate decreasing values
+        yf = Covid19EstimatorFull(x, x0, k0, P, x1)
+        
+        r = math.floor(countryIndex / 4)
+        c = countryIndex % 4
+
+        ax[r, c].scatter(x, y0, color='green', marker='.')
+        #plt.plot(x, y, color='red')
+
+        # Blue dotted estimated plot
+        ax[r, c].plot(x, yf, 'b:')
+
+        #plt.plot(y)
+        #a1.plot(y)
+        #plt.plot(dftscum.cases, color='red')
+
+    plt.show()
+
+#TestEstimator()
 
 # Get COVID-19 daily data into a DataFrame
 df = hf.GetCovid19Data()
@@ -100,9 +204,9 @@ df = hf.GetCovid19Data()
 print("Processing DataFrame to find aggregates...")
 df_top_cases_and_deaths = AggCasesDeaths(df)
 
-print("Performing Time Series Analysis...")
-TimeSeriesAnalysis(df, df_top_cases_and_deaths)
-
 # Plot graphs
 print("Plotting Graphs for Aggregates...")
 PlotAggGraph(df_top_cases_and_deaths)
+
+print("Performing Time Series Analysis...")
+TimeSeriesAnalysis(df, df_top_cases_and_deaths)
