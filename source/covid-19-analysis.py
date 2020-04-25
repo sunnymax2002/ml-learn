@@ -234,6 +234,15 @@ def TimeSeriesAnalysis(df, df_top_cases_and_deaths):
     #df_top_cases_and_deaths['x0'] = pd.DataFrame()
     comb_df = pd.concat([df_top_cases_and_deaths, est_df], axis=1)
     print(comb_df)
+    #plt.plot(x=comb_df.PeakDate, y=comb_df.PeakCases)
+    ndf = comb_df.loc[:,['PeakDate', 'PeakCases']].sort_values(by='PeakDate')
+    print(ndf)
+    coord = ndf.plot.bar(y='PeakCases')
+    print(coord)
+    # TODO annotate PeakDate on top of each bar: https://matplotlib.org/2.0.2/users/annotations.html 
+    # http://queirozf.com/entries/add-labels-and-text-to-matplotlib-plots-annotation-examples#add-labels-to-bar-plots
+    ndf.plot(y='PeakDate')
+    plt.show()
 
 #TestEstimator()
 
